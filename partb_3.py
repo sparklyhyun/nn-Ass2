@@ -17,7 +17,7 @@ HIDDEN_SIZE = 20
 MAX_LABEL = 15
 EMBEDDING_SIZE = 20
 
-no_epochs = 500  #originally 100
+no_epochs = 100  #originally 100
 lr = 0.01
 
 tf.logging.set_verbosity(tf.logging.ERROR)

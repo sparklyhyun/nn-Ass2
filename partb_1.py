@@ -59,8 +59,11 @@ def char_cnn_model(x):
             padding = 'SAME')
 
     pool2 = tf.squeeze(tf.reduce_max(pool2, 1), squeeze_dims=[1])
-
+    print('pool2')
+    print(pool2)
     logits = tf.layers.dense(pool2, MAX_LABEL, activation= None)
+    print('logits')
+    print(logits)
     return input_layer, logits
 
 #data preprocessing 
@@ -129,6 +132,7 @@ def main():
         for e in range(no_epochs):
             np.random.shuffle(idx)
             trainX_batch, trainY_batch = x_train[idx], y_train[idx]
+            print(trainX_batch)
             #batch training
             for start, end in zip(range(0, N, batch_size), range(batch_size, N, batch_size)):
                 _, loss_ = sess.run([train_op, entropy], {x: trainX_batch[start:end], y_: trainY_batch[start:end]})
