@@ -6,11 +6,11 @@ import pylab
 
 import os
 
-'''
+
 if not os.path.isdir('figures'):
     print('creating the figures folder')
     os.makedirs('figures')
-'''
+
 
 MAX_DOCUMENT_LENGTH = 100
 HIDDEN_SIZE = 20
@@ -74,7 +74,7 @@ def data_read_words():
     no_words = len(vocab_processor.vocabulary_)
     print('Total words: %d' % no_words)
 
-    return x_train, y_train, x_test, y_test
+    return x_train, y_train, x_test, y_test, no_words
 
 def main():
     global n_words
@@ -114,13 +114,13 @@ def main():
         pylab.plot(range(len(loss)), loss)
         pylab.xlabel('epochs')
         pylab.ylabel('entropy')
-        #pylab.savefig('figures/t9q3_1.png')
+        pylab.savefig('figures/partb_4_entropy.png')
 
         pylab.figure(2)
         pylab.plot(range(len(acc)), acc)
         pylab.xlabel('epochs')
         pylab.ylabel('accuracy')
-        #pylab.savefig('figures/t9q3_2.png')
+        pylab.savefig('figures/partb_4_accuracy.png')
 
         pylab.show()
   

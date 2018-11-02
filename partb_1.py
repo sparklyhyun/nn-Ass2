@@ -4,11 +4,11 @@ import tensorflow as tf
 import csv
 import pylab
 
-'''
+import os
+
 if not os.path.isdir('figures'):
     print('creating the figures folder')
     os.makedirs('figures')
-'''
 
 MAX_DOCUMENT_LENGTH = 100
 N_FILTERS = 10
@@ -19,7 +19,7 @@ POOLING_STRIDE = 2
 MAX_LABEL = 15
 batch_size = 128
 
-no_epochs = 10  #originally 100
+no_epochs = 100 #originally 100
 lr = 0.01
 
 tf.logging.set_verbosity(tf.logging.ERROR)
@@ -59,9 +59,8 @@ def char_cnn_model(x):
             padding = 'SAME')
 
     pool2 = tf.squeeze(tf.reduce_max(pool2, 1), squeeze_dims=[1])
-    print('pool 2 done')
-    #output softmax layer 
-    logits = tf.layers.dense(pool2, MAX_LABEL, activation=tf.nn.softmax)
+
+    logits = tf.layers.dense(pool2, MAX_LABEL, activation= None)
     return input_layer, logits
 
 #data preprocessing 
@@ -113,8 +112,7 @@ def main():
     train_op = tf.train.AdamOptimizer(lr).minimize(entropy)
 
     #prediction part
-    correct_prediction = tf.cast(tf.equal(tf.argmax(logits, axis=1), y_), tf.int64)
-    accuracy = tf.reduce_mean(correct_prediction)
+    accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(logits, axis=1), y_), tf.float64))
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
@@ -133,17 +131,15 @@ def main():
             trainX_batch, trainY_batch = x_train[idx], y_train[idx]
             #batch training
             for start, end in zip(range(0, N, batch_size), range(batch_size, N, batch_size)):
-                _, loss_  = sess.run([train_op, entropy], {x: trainX_batch[start:end], y_: trainY_batch[start:end]})
+                _, loss_ = sess.run([train_op, entropy], {x: trainX_batch[start:end], y_: trainY_batch[start:end]})
                 loss_batch.append(loss_)
-                acc = accuracy.eval(feed_dict={x: x_test, y_: y_test})
-                print(acc)
+                #acc = accuracy.eval(feed_dict={x: x_test, y_: y_test})
+                #print(acc)
 
             loss.append(sum(loss_batch)/len(loss_batch))
             loss_batch[:] = []
             #test accuracy!!!!!!
-            #test_acc.append(accuracy.eval(feed_dict={x: x_test, y_: y_test}))
-
-            #test_acc.append(sess.run(accuracy, feed_dict={x: x_test, y_: y_test}))
+            test_acc.append(accuracy.eval(feed_dict={x: x_test, y_: y_test}))
 
             print('test done')
             if e%1 == 0:
@@ -155,13 +151,13 @@ def main():
         pylab.plot(range(len(loss)), loss)
         pylab.xlabel('epochs')
         pylab.ylabel('entropy')
-        # pylab.savefig('figures/t9q3_1.png')
+        pylab.savefig('figures/partb_1_entropy.png')
 
         pylab.figure(2)
         pylab.plot(range(len(test_acc)), test_acc)
         pylab.xlabel('epochs')
         pylab.ylabel('accuracy')
-        # pylab.savefig('figures/t9q3_2.png')
+        pylab.savefig('figures/partb_1_accuracy.png')
 
         pylab.show()
         
