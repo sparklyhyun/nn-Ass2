@@ -18,8 +18,9 @@ POOLING_WINDOW = 4
 POOLING_STRIDE = 2
 MAX_LABEL = 15
 batch_size = 128
+drop_out_rate = 0.5
 
-no_epochs = 100 #originally 100
+no_epochs = 10 #originally 100
 lr = 0.01
 
 tf.logging.set_verbosity(tf.logging.ERROR)
@@ -59,7 +60,11 @@ def char_cnn_model(x):
             padding = 'SAME')
 
     pool2 = tf.squeeze(tf.reduce_max(pool2, 1), squeeze_dims=[1])
-    logits = tf.layers.dense(pool2, MAX_LABEL, activation= None)
+
+    dense = tf.layers.dense(pool2, MAX_LABEL, activation= None)
+    dropout = tf.layers.dropout(inputs=dense, rate=drop_out_rate)
+    logits = tf.layers.dense(dropout, MAX_LABEL)
+
     return input_layer, logits
 
 #data preprocessing 
@@ -128,7 +133,6 @@ def main():
         for e in range(no_epochs):
             np.random.shuffle(idx)
             trainX_batch, trainY_batch = x_train[idx], y_train[idx]
-            print(trainX_batch)
             #batch training
             for start, end in zip(range(0, N, batch_size), range(batch_size, N, batch_size)):
                 _, loss_ = sess.run([train_op, entropy], {x: trainX_batch[start:end], y_: trainY_batch[start:end]})
@@ -150,13 +154,13 @@ def main():
         pylab.plot(range(len(loss)), loss)
         pylab.xlabel('epochs')
         pylab.ylabel('entropy')
-        pylab.savefig('figures/partb_1_entropy.png')
+        pylab.savefig('figures/partb_5(1)_entropy.png')
 
         pylab.figure(2)
         pylab.plot(range(len(test_acc)), test_acc)
         pylab.xlabel('epochs')
         pylab.ylabel('accuracy')
-        pylab.savefig('figures/partb_1_accuracy.png')
+        pylab.savefig('figures/partb_5(1)_accuracy.png')
 
         pylab.show()
         
