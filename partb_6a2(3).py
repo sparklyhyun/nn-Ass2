@@ -27,17 +27,17 @@ tf.set_random_seed(seed)
 #is this a character model or word model???
 def rnn_model(x):
 
-    word_vectors = tf.contrib.layers.embed_sequence(
-        x, vocab_size=n_words, embed_dim=EMBEDDING_SIZE)
+    byte_vectors = tf.one_hot(x, no_char)
+    byte_list = tf.unstack(byte_vectors, axis=1)
 
-    word_list = tf.unstack(word_vectors, axis=1)
+    cell = tf.nn.rnn_cell.BasicLSTMCell(HIDDEN_SIZE)
+    #_, encoding = tf.nn.static_rnn(cell, byte_list, dtype=tf.float32)
+    outputs, states = tf.nn.static_rnn(cell, byte_list, dtype=tf.float32)
 
-    cell = tf.nn.rnn_cell.BasicRNNCell(HIDDEN_SIZE)
-    _, encoding = tf.nn.static_rnn(cell, word_list, dtype=tf.float32)
 
-    logits = tf.layers.dense(encoding, MAX_LABEL, activation=tf.nn.softmax)
+    logits = tf.layers.dense(states[-1], MAX_LABEL, activation=tf.nn.softmax)
 
-    return logits, word_list
+    return logits, byte_list
 
 def data_read_words():
   
@@ -46,40 +46,36 @@ def data_read_words():
     with open('train_medium.csv', encoding='utf-8') as filex:
         reader = csv.reader(filex)
         for row in reader:
-            x_train.append(row[2])
+            x_train.append(row[1])
             y_train.append(int(row[0]))
 
     with open("test_medium.csv", encoding='utf-8') as filex:
         reader = csv.reader(filex)
         for row in reader:
-            x_test.append(row[2])
+            x_test.append(row[1])
             y_test.append(int(row[0]))
-  
+
     x_train = pandas.Series(x_train)
     y_train = pandas.Series(y_train)
     x_test = pandas.Series(x_test)
     y_test = pandas.Series(y_test)
+
+    char_processor = tf.contrib.learn.preprocessing.ByteProcessor(MAX_DOCUMENT_LENGTH)
+    x_train = np.array(list(char_processor.fit_transform(x_train)))
+    x_test = np.array(list(char_processor.transform(x_test)))
     y_train = y_train.values
     y_test = y_test.values
 
-    vocab_processor = tf.contrib.learn.preprocessing.VocabularyProcessor(
-        MAX_DOCUMENT_LENGTH)
+    no_char = char_processor.max_document_length
+    print('Total chrarcters: %d' % no_char)
 
-    x_transform_train = vocab_processor.fit_transform(x_train)
-    x_transform_test = vocab_processor.transform(x_test)
+    return x_train, y_train, x_test, y_test, no_char
 
-    x_train = np.array(list(x_transform_train))
-    x_test = np.array(list(x_transform_test))
-
-    no_words = len(vocab_processor.vocabulary_)
-    print('Total words: %d' % no_words)
-
-    return x_train, y_train, x_test, y_test, no_words
 
 def main():
-    global n_words
+    global no_char
 
-    x_train, y_train, x_test, y_test, n_words = data_read_words()
+    x_train, y_train, x_test, y_test, no_char= data_read_words()
 
     # Create the model
     x = tf.placeholder(tf.int64, [None, MAX_DOCUMENT_LENGTH])
@@ -114,13 +110,13 @@ def main():
         pylab.plot(range(len(loss)), loss)
         pylab.xlabel('epochs')
         pylab.ylabel('entropy')
-        pylab.savefig('figures/partb_6a1(4)_entropy.png')
+        pylab.savefig('figures/partb_6a2(3)_entropy.png')
 
         pylab.figure(2)
         pylab.plot(range(len(acc)), acc)
         pylab.xlabel('epochs')
         pylab.ylabel('accuracy')
-        pylab.savefig('figures/partb_6a1(4)_accuracy.png')
+        pylab.savefig('figures/partb_6a2(3)_accuracy.png')
 
         pylab.show()
   

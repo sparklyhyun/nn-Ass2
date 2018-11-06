@@ -17,8 +17,10 @@ HIDDEN_SIZE = 20
 MAX_LABEL = 15
 EMBEDDING_SIZE = 20
 
-no_epochs = 100  #originally 100
+no_epochs = 300  #originally 100
 lr = 0.01
+clipping_threshold = 2
+
 
 tf.logging.set_verbosity(tf.logging.ERROR)
 seed = 10
@@ -88,7 +90,14 @@ def main():
     logits, word_list = rnn_model(x)
 
     entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=tf.one_hot(y_, MAX_LABEL), logits=logits))
-    train_op = tf.train.AdamOptimizer(lr).minimize(entropy)
+    #train_op = tf.train.AdamOptimizer(lr).minimize(entropy)
+
+    # applying gradient clippint
+    optimizer = tf.train.AdamOptimizer(lr)
+    gradients = optimizer.compute_gradients(entropy)
+    gradient_clipping = [(tf.clip_by_value(grad, -clipping_threshold, clipping_threshold), var) for grad, var in
+                         gradients]
+    train_op = optimizer.apply_gradients(gradient_clipping)
 
     accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(logits, axis=1), y_), tf.float64))
 

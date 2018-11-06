@@ -32,10 +32,12 @@ def rnn_model(x):
 
     word_list = tf.unstack(word_vectors, axis=1)
 
-    cell = tf.nn.rnn_cell.BasicRNNCell(HIDDEN_SIZE)
-    _, encoding = tf.nn.static_rnn(cell, word_list, dtype=tf.float32)
+    cell1 = tf.nn.rnn_cell.BasicRNNCell(HIDDEN_SIZE)
+    cell2 = tf.nn.rnn_cell.BasicRNNCell(HIDDEN_SIZE)
+    cells = tf.nn.rnn_cell.MultiRNNCell([cell1, cell2])
+    outputs, states = tf.nn.static_rnn(cells, word_list, dtype=tf.float32)
 
-    logits = tf.layers.dense(encoding, MAX_LABEL, activation=tf.nn.softmax)
+    logits = tf.layers.dense(states[-1], MAX_LABEL, activation=tf.nn.softmax)
 
     return logits, word_list
 
@@ -114,13 +116,13 @@ def main():
         pylab.plot(range(len(loss)), loss)
         pylab.xlabel('epochs')
         pylab.ylabel('entropy')
-        pylab.savefig('figures/partb_6a1(4)_entropy.png')
+        pylab.savefig('figures/partb_6b(4)_entropy.png')
 
         pylab.figure(2)
         pylab.plot(range(len(acc)), acc)
         pylab.xlabel('epochs')
         pylab.ylabel('accuracy')
-        pylab.savefig('figures/partb_6a1(4)_accuracy.png')
+        pylab.savefig('figures/partb_6b(4)_accuracy.png')
 
         pylab.show()
   

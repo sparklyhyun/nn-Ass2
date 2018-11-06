@@ -32,10 +32,18 @@ def rnn_model(x):
 
     word_list = tf.unstack(word_vectors, axis=1)
 
-    cell = tf.nn.rnn_cell.GRUCell(HIDDEN_SIZE)
-    _, encoding = tf.nn.static_rnn(cell, word_list, dtype=tf.float32)
+    cell = tf.nn.rnn_cell.BasicLSTMCell(HIDDEN_SIZE)
 
-    logits = tf.layers.dense(encoding, MAX_LABEL, activation=tf.nn.softmax)
+    outputs, states = tf.nn.static_rnn(cell, word_list, dtype=tf.float32)
+    #outputs, states = tf.nn.dynamic_rnn(cell, word_list, dtype=tf.float32)
+
+    print('here')
+
+    #outputs = tf.stack(outputs)
+    #states = tf.stack(states)
+
+    #logits = tf.layers.dense(outputs, MAX_LABEL, activation=tf.nn.softmax)
+    logits = tf.layers.dense(states[-1], MAX_LABEL, activation=tf.nn.softmax)
 
     return logits, word_list
 
@@ -85,6 +93,7 @@ def main():
     x = tf.placeholder(tf.int64, [None, MAX_DOCUMENT_LENGTH])
     y_ = tf.placeholder(tf.int64)
 
+
     logits, word_list = rnn_model(x)
 
     entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=tf.one_hot(y_, MAX_LABEL), logits=logits))
@@ -103,8 +112,6 @@ def main():
             loss.append(loss_)
 
             acc.append(accuracy.eval(feed_dict={x: x_test, y_: y_test}))
-            #acc.append(sess.run(accuracy, feed_dict={x: x_test, y_: y_test}))
-            #print('epoch: %d, accuracy: %g' %(e, acc[e]))
 
             if e%10 == 0:
                 print('epoch: %d, entropy: %g'%(e, loss[e]))
@@ -114,13 +121,13 @@ def main():
         pylab.plot(range(len(loss)), loss)
         pylab.xlabel('epochs')
         pylab.ylabel('entropy')
-        pylab.savefig('figures/partb_4_entropy.png')
+        pylab.savefig('figures/partb_6a2(4)_entropy.png')
 
         pylab.figure(2)
         pylab.plot(range(len(acc)), acc)
         pylab.xlabel('epochs')
         pylab.ylabel('accuracy')
-        pylab.savefig('figures/partb_4_accuracy.png')
+        pylab.savefig('figures/partb_6a2(4)_accuracy.png')
 
         pylab.show()
   
