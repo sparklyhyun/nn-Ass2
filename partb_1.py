@@ -128,17 +128,14 @@ def main():
         for e in range(no_epochs):
             np.random.shuffle(idx)
             trainX_batch, trainY_batch = x_train[idx], y_train[idx]
-            print(trainX_batch)
+
             #batch training
             for start, end in zip(range(0, N, batch_size), range(batch_size, N, batch_size)):
                 _, loss_ = sess.run([train_op, entropy], {x: trainX_batch[start:end], y_: trainY_batch[start:end]})
                 loss_batch.append(loss_)
-                #acc = accuracy.eval(feed_dict={x: x_test, y_: y_test})
-                #print(acc)
 
             loss.append(sum(loss_batch)/len(loss_batch))
             loss_batch[:] = []
-            #test accuracy!!!!!!
             test_acc.append(accuracy.eval(feed_dict={x: x_test, y_: y_test}))
 
             if e%1 == 0:
