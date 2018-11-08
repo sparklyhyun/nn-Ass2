@@ -14,15 +14,12 @@ if not os.path.isdir('figures'):
 
 MAX_DOCUMENT_LENGTH = 100
 HIDDEN_SIZE = 20
-HIDDEN_SIZE2 = 20
 MAX_LABEL = 15
 EMBEDDING_SIZE = 20
 batch_size = 128
 
 no_epochs = 100  #originally 100
 lr = 0.01
-clipping_threshold = 2
-
 
 tf.logging.set_verbosity(tf.logging.ERROR)
 seed = 10
@@ -36,27 +33,28 @@ def rnn_model(x):
 
     word_list = tf.unstack(word_vectors, axis=1)
 
-    cell = tf.nn.rnn_cell.GRUCell(HIDDEN_SIZE, name="cell1")
-    _, encoding = tf.nn.static_rnn(cell, word_list, dtype=tf.float32)
+    cell1 = tf.nn.rnn_cell.GRUCell(HIDDEN_SIZE)
+    cell2 = tf.nn.rnn_cell.GRUCell(HIDDEN_SIZE)
+    cells = tf.nn.rnn_cell.MultiRNNCell([cell1, cell2])
+    outputs, states = tf.nn.static_rnn(cells, word_list, dtype=tf.float32)
 
-    logits = tf.layers.dense(encoding, MAX_LABEL, activation=None)
+    logits = tf.layers.dense(states[-1], MAX_LABEL, activation=tf.nn.softmax)
 
     return logits, word_list
 
-# to use without gradient clipping
 def rnn_model2(x):
 
-    word_vectors2 = tf.contrib.layers.embed_sequence(
+    word_vectors = tf.contrib.layers.embed_sequence(
         x, vocab_size=n_words, embed_dim=EMBEDDING_SIZE)
 
-    word_list2 = tf.unstack(word_vectors2, axis=1)
+    word_list = tf.unstack(word_vectors, axis=1)
 
-    cell2 = tf.nn.rnn_cell.GRUCell(HIDDEN_SIZE2, name="cell2")
-    _, encoding2 = tf.nn.static_rnn(cell2, word_list2, dtype=tf.float32)
+    cell = tf.nn.rnn_cell.GRUCell(HIDDEN_SIZE)
+    _, encoding = tf.nn.static_rnn(cell, word_list, dtype=tf.float32)
 
-    logits2 = tf.layers.dense(encoding2, MAX_LABEL, activation=None)
+    logits = tf.layers.dense(encoding, MAX_LABEL, activation=tf.nn.softmax)
 
-    return logits2, word_list2
+    return logits, word_list
 
 def data_read_words():
   
@@ -95,7 +93,6 @@ def data_read_words():
 
     return x_train, y_train, x_test, y_test, no_words
 
-
 def main():
     global n_words
 
@@ -104,25 +101,15 @@ def main():
     # Create the model
     x = tf.placeholder(tf.int64, [None, MAX_DOCUMENT_LENGTH])
     y_ = tf.placeholder(tf.int64)
+
     logits, word_list = rnn_model(x)
 
     entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=tf.one_hot(y_, MAX_LABEL), logits=logits))
+    train_op = tf.train.AdamOptimizer(lr, name="adam1").minimize(entropy)
 
-    # applying gradient clippint
-    optimizer = tf.train.AdamOptimizer(lr, name='adam1')
-    gradients = optimizer.compute_gradients(entropy)
-    # Gradient clipping
-    grad_clipping = tf.constant(2.0, name="grad_clipping")
-    clipped_grads_and_vars = []
-    for grad, var in gradients:
-        clipped_grad = tf.clip_by_value(grad, -grad_clipping, grad_clipping)
-        clipped_grads_and_vars.append((clipped_grad, var))
-
-    # Gradient updates
-    train_op = optimizer.apply_gradients(clipped_grads_and_vars)
     accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(logits, axis=1), y_), tf.float64))
 
-    # without gradient clipping
+    #single gru cell
     x2 = tf.placeholder(tf.int64, [None, MAX_DOCUMENT_LENGTH])
     y2_ = tf.placeholder(tf.int64)
     logits2, word_list2 = rnn_model2(x2)
@@ -140,7 +127,7 @@ def main():
         loss_batch = []
         acc = []
 
-        # without gradient clipping
+        #single gru cell
         loss2 = []
         loss_batch2 = []
         acc2 = []
@@ -157,7 +144,8 @@ def main():
                 word_list_, _, loss_  = sess.run([word_list, train_op, entropy], {x: trainX_batch[start:end], y_: trainY_batch[start:end]})
                 loss_batch.append(loss_)
 
-                #without clipping
+
+                #single gru cell
                 word_list2_, _, loss2_ = sess.run([word_list2, train_op2, entropy2],{x2: trainX_batch[start:end], y2_: trainY_batch[start:end]})
                 loss_batch2.append(loss2_)
 
@@ -165,32 +153,32 @@ def main():
             loss_batch[:] = []
             acc.append(accuracy.eval(feed_dict={x: x_test, y_: y_test}))
 
-            #without clipping
+            #single gru cell
             loss2.append(sum(loss_batch2) / len(loss_batch2))
             loss_batch2[:] = []
             acc2.append(accuracy2.eval(feed_dict={x2: x_test, y2_: y_test}))
 
             if e%10 == 0:
-                print('With clipping, epoch: %d, entropy: %g'%(e, loss[e]))
-                print('With clipping, epoch: %d, accuracy: %g' %(e, acc[e]))
-                print('Without clipping. epoch: %d, entropy: %g' % (e, loss2[e]))
-                print('Without clipping, epoch: %d, accuracy: %g' % (e, acc2[e]))
+                print('2 cells, epoch: %d, entropy: %g'%(e, loss[e]))
+                print('2 cells, epoch: %d, accuracy: %g' %(e, acc[e]))
+                print('1 cell, epoch: %d, entropy: %g' % (e, loss2[e]))
+                print('1 cell, epoch: %d, accuracy: %g' % (e, acc2[e]))
 
         pylab.figure(1)
         pylab.plot(range(len(loss)), loss)
         pylab.plot(range(len(loss2)), loss2)
         pylab.xlabel('epochs')
         pylab.ylabel('entropy')
-        pylab.legend(['With gradient clipping', 'Without gradient clipping'])
-        pylab.savefig('figures/partb_6c(4)_entropy_merged.png')
+        pylab.legend(['2 Cells', '1 Cell'])
+        pylab.savefig('figures/partb_6b(4)_entropy_merged.png')
 
         pylab.figure(2)
         pylab.plot(range(len(acc)), acc)
         pylab.plot(range(len(acc2)), acc2)
         pylab.xlabel('epochs')
         pylab.ylabel('accuracy')
-        pylab.legend(['With gradient clipping', 'Without gradient clipping'])
-        pylab.savefig('figures/partb_6c(4)_accuracy_merged.png')
+        pylab.legend(['2 Cells', '1 Cell'])
+        pylab.savefig('figures/partb_6b(4)_accuracy_merged.png')
 
         pylab.show()
   

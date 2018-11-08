@@ -32,7 +32,7 @@ def rnn_model(x):
     byte_vectors = tf.one_hot(x, no_char)
     byte_list = tf.unstack(byte_vectors, axis=1)
 
-    cell = tf.nn.rnn_cell.BasicRNNCell(HIDDEN_SIZE)
+    cell = tf.nn.rnn_cell.GRUCell(HIDDEN_SIZE)
     _, encoding = tf.nn.static_rnn(cell, byte_list, dtype=tf.float32)
 
     logits = tf.layers.dense(encoding, MAX_LABEL, activation=tf.nn.softmax)

@@ -41,7 +41,7 @@ def word_cnn_model(x):
             filters=N_FILTERS,
             kernel_size=FILTER_SHAPE1,
             padding='VALID',
-            activation=tf.nn.relu,)
+            activation=tf.nn.relu)
         pool1 = tf.layers.max_pooling2d(
             conv1,
             pool_size=POOLING_WINDOW,
@@ -55,7 +55,7 @@ def word_cnn_model(x):
             filters = N_FILTERS,
             kernel_size = FILTER_SHAPE2,
             padding='VALID',
-            activation = tf.nn.relu,)
+            activation = tf.nn.relu)
         pool2 = tf.layers.max_pooling2d(
             conv2,
             pool_size = POOLING_WINDOW,
@@ -82,7 +82,7 @@ def word_cnn_model2(x):
             filters=N_FILTERS,
             kernel_size=FILTER_SHAPE1,
             padding='VALID',
-            activation=tf.nn.relu,)
+            activation=tf.nn.relu)
         pool1 = tf.layers.max_pooling2d(
             conv1,
             pool_size=POOLING_WINDOW,
@@ -96,7 +96,7 @@ def word_cnn_model2(x):
             filters = N_FILTERS,
             kernel_size = FILTER_SHAPE2,
             padding='VALID',
-            activation = tf.nn.relu,)
+            activation = tf.nn.relu)
         pool2 = tf.layers.max_pooling2d(
             conv2,
             pool_size = POOLING_WINDOW,
@@ -107,7 +107,7 @@ def word_cnn_model2(x):
 
     #output softmax layer
     logits = tf.layers.dense(pool2, MAX_LABEL, activation=None)
-    return input_layer, logits
+    return input_layer2, logits
 
 
 #data preprocessing 
@@ -163,7 +163,7 @@ def main():
     #model without dropout
     x2 = tf.placeholder(tf.int64, [None, MAX_DOCUMENT_LENGTH])
     y2_ = tf.placeholder(tf.int64)
-    inputs2, logits2 = word_cnn_model(x2)
+    inputs2, logits2 = word_cnn_model2(x2)
 
     # Optimizer
     entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=tf.one_hot(y_, MAX_LABEL), logits=logits))
@@ -177,7 +177,7 @@ def main():
     accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(logits, axis=1), y_), tf.float64))
 
     #predictions without dropout
-    accuracy2 = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(logits2, axis=1), y_), tf.float64))
+    accuracy2 = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(logits2, axis=1), y2_), tf.float64))
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
@@ -235,7 +235,7 @@ def main():
 
         pylab.figure(2)
         pylab.plot(range(len(test_acc)), test_acc)
-        ylab.plot(range(len(test_acc2)), test_acc2)
+        pylab.plot(range(len(test_acc2)), test_acc2)
         pylab.xlabel('epochs')
         pylab.ylabel('accuracy')
         pylab.legend(['With dropout', 'Without dropout'])

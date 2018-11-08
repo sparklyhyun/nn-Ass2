@@ -95,7 +95,7 @@ def main():
     # applying gradient clippint
     optimizer = tf.train.AdamOptimizer(lr)
     gradients = optimizer.compute_gradients(entropy)
-
+    print(gradients)
     # Gradient clipping
     grad_clipping = tf.constant(2.0, name="grad_clipping")
     clipped_grads_and_vars = []

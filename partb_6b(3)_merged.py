@@ -18,7 +18,7 @@ MAX_LABEL = 15
 EMBEDDING_SIZE = 20
 batch_size = 128
 
-no_epochs = 100  #originally 100
+no_epochs = 100 #originally 100
 lr = 0.01
 
 tf.logging.set_verbosity(tf.logging.ERROR)
@@ -31,11 +31,24 @@ def rnn_model(x):
     byte_vectors = tf.one_hot(x, no_char)
     byte_list = tf.unstack(byte_vectors, axis=1)
 
-    cell = tf.nn.rnn_cell.BasicLSTMCell(HIDDEN_SIZE)
-    outputs, states = tf.nn.static_rnn(cell, byte_list, dtype=tf.float32)
-
+    cell1 = tf.nn.rnn_cell.GRUCell(HIDDEN_SIZE)
+    cell2 = tf.nn.rnn_cell.GRUCell(HIDDEN_SIZE)
+    cells = tf.nn.rnn_cell.MultiRNNCell([cell1, cell2])
+    outputs, states = tf.nn.static_rnn(cells, byte_list, dtype=tf.float32)
 
     logits = tf.layers.dense(states[-1], MAX_LABEL, activation=tf.nn.softmax)
+
+    return logits, byte_list
+
+def rnn_model2(x):
+
+    byte_vectors = tf.one_hot(x, no_char)
+    byte_list = tf.unstack(byte_vectors, axis=1)
+
+    cell = tf.nn.rnn_cell.GRUCell(HIDDEN_SIZE)
+    _, encoding = tf.nn.static_rnn(cell, byte_list, dtype=tf.float32)
+
+    logits = tf.layers.dense(encoding, MAX_LABEL, activation=tf.nn.softmax)
 
     return logits, byte_list
 
@@ -77,24 +90,39 @@ def main():
 
     x_train, y_train, x_test, y_test, no_char= data_read_words()
 
-    # Create the model
+    # 2 cells
     x = tf.placeholder(tf.int64, [None, MAX_DOCUMENT_LENGTH])
     y_ = tf.placeholder(tf.int64)
-
     logits, word_list = rnn_model(x)
 
+    # 1 cell
+    x2 = tf.placeholder(tf.int64, [None, MAX_DOCUMENT_LENGTH])
+    y2_ = tf.placeholder(tf.int64)
+    logits2, word_list2 = rnn_model2(x2)
+
+    #2 cells
     entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=tf.one_hot(y_, MAX_LABEL), logits=logits))
     train_op = tf.train.AdamOptimizer(lr).minimize(entropy)
-
     accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(logits, axis=1), y_), tf.float64))
+
+    #1cell
+    entropy2 = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=tf.one_hot(y2_, MAX_LABEL), logits=logits2))
+    train_op2 = tf.train.AdamOptimizer(lr).minimize(entropy2)
+    accuracy2 = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(logits2, axis=1), y2_), tf.float64))
+
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
 
-        # training
+        # 2 cells
         loss = []
         loss_batch = []
         acc = []
+
+        # 1 cell
+        loss2 = []
+        loss_batch2 = []
+        acc2 = []
 
         # breaking down into batches
         N = len(x_train)
@@ -108,25 +136,40 @@ def main():
                 word_list_, _, loss_  = sess.run([word_list, train_op, entropy], {x: trainX_batch[start:end], y_: trainY_batch[start:end]})
                 loss_batch.append(loss_)
 
+                word_list2_, _, loss2_ = sess.run([word_list2, train_op2, entropy2],{x2: trainX_batch[start:end], y2_: trainY_batch[start:end]})
+                loss_batch2.append(loss2_)
+
+            #2cells
             loss.append(sum(loss_batch) / len(loss_batch))
             loss_batch[:] = []
             acc.append(accuracy.eval(feed_dict={x: x_test, y_: y_test}))
 
+            #1cell
+            loss2.append(sum(loss_batch2) / len(loss_batch2))
+            loss_batch2[:] = []
+            acc2.append(accuracy2.eval(feed_dict={x2: x_test, y2_: y_test}))
+
             if e%10 == 0:
-                print('epoch: %d, entropy: %g'%(e, loss[e]))
-                print('epoch: %d, accuracy: %g' %(e, acc[e]))
+                print('2 Cells, epoch: %d, entropy: %g'%(e, loss[e]))
+                print('2 Cells, epoch: %d, accuracy: %g' %(e, acc[e]))
+                print('1 Cell, epoch: %d, entropy: %g' % (e, loss2[e]))
+                print('1 Cell, epoch: %d, accuracy: %g' % (e, acc2[e]))
 
         pylab.figure(1)
         pylab.plot(range(len(loss)), loss)
+        pylab.plot(range(len(loss2)), loss2)
         pylab.xlabel('epochs')
         pylab.ylabel('entropy')
-        pylab.savefig('figures/partb_6a2(3)_entropy.png')
+        pylab.legend(['2 Cells', '1 Cell'])
+        pylab.savefig('figures/partb_6b(3)_entropy_merged.png')
 
         pylab.figure(2)
         pylab.plot(range(len(acc)), acc)
+        pylab.plot(range(len(acc2)), acc2)
         pylab.xlabel('epochs')
         pylab.ylabel('accuracy')
-        pylab.savefig('figures/partb_6a2(3)_accuracy.png')
+        pylab.legend(['2 Cells', '1 Cell'])
+        pylab.savefig('figures/partb_6b(3)_accuracy_merged.png')
 
         pylab.show()
   
